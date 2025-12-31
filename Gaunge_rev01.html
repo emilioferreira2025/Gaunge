@@ -3,175 +3,240 @@
 <head>
   <meta charset="UTF-8" />
 
-  <!-- SDK oficial do Custom Widget TagoIO -->
+  <!-- ======================================================
+       SDK OFICIAL DO CUSTOM WIDGET TAGOIO
+       Permite acessar:
+       - window.TagoIO.onStart
+       - window.TagoIO.onRealtime
+       - widget.data
+       ====================================================== -->
   <script src="https://admin.tago.io/dist/custom-widget.min.js"></script>
 
-  <!-- Apache ECharts -->
+  <!-- ======================================================
+       APACHE ECHARTS
+       Biblioteca responsável pelo Gauge
+       ====================================================== -->
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 
   <style>
     /* ======================================================
-       O widget ocupa 100% do espaço disponível
+       ESTILO GLOBAL
        ====================================================== */
     html, body {
-      width: 100%;
-      height: 100%;
       margin: 0;
       padding: 0;
+      width: 100%;
+      height: 100%;
       background: #ffffff;
       font-family: Arial, Helvetica, sans-serif;
     }
 
     /* ======================================================
-       Container responsivo do Gauge
+       CONTAINER DO GRÁFICO
+       Ocupar todo o espaço do widget
        ====================================================== */
     #chart {
       width: 100%;
       height: 100%;
-      min-height: 240px;
+      min-height: 250px;
     }
   </style>
 </head>
 
 <body>
 
-  <!-- Container do gráfico -->
+  <!-- ======================================================
+       DIV ONDE O GAUGE SERÁ RENDERIZADO
+       ====================================================== -->
   <div id="chart"></div>
 
   <script>
     /* ======================================================
-       VARIÁVEIS GERAIS
+       VARIÁVEL GLOBAL DO GRÁFICO
+       Evita recriar o gráfico a cada atualização
        ====================================================== */
     let chart = null;
 
-    const VARIABLE_NAME = "current_ipp1"; // nome da tag no TagoIO
-    const MAX_SCALE = 60;                 // escala máxima (deve ser múltiplo de 10)
+    /* ======================================================
+       CONFIGURAÇÕES DA ESCALA
+       ====================================================== */
+
+    const MAX_SCALE = 60;          // 🔴 Escala máxima do instrumento (A)
+    const VARIABLE_NAME = "current_ipp1"; // 🔴 Nome da variável no TagoIO
 
     /* ======================================================
        FUNÇÃO QUE DESENHA / ATUALIZA O GAUGE
+       Recebe o valor numérico vindo do TagoIO
        ====================================================== */
     function renderGauge(value) {
 
-      /* Inicializa apenas uma vez */
+      /* --------------------------------------------------
+         Inicializa o gráfico apenas uma vez
+         -------------------------------------------------- */
       if (!chart) {
         chart = echarts.init(document.getElementById("chart"));
       }
 
-      /* Proteção contra estouro da escala */
+      /* --------------------------------------------------
+         Proteção: evita ultrapassar a escala máxima
+         -------------------------------------------------- */
       const safeValue = Math.min(value, MAX_SCALE);
 
-      /* Quantidade de divisões (10 em 10) */
-      const splitCount = MAX_SCALE / 10;
-
+      /* --------------------------------------------------
+         CONFIGURAÇÃO COMPLETA DO GAUGE
+         -------------------------------------------------- */
       chart.setOption({
-        series: [{
-          type: "gauge",
+        series: [
+          {
+            type: "gauge",
 
-          /* Gauge em meia-lua */
-          startAngle: 180,
-          endAngle: 0,
+            /* ----------------------------------------------
+               FORMATO DO GAUGE (MEIA LUA)
+               ---------------------------------------------- */
+            startAngle: 180,
+            endAngle: 0,
 
-          /* Escala */
-          min: 0,
-          max: MAX_SCALE,
-          splitNumber: splitCount, // garante escala de 10 em 10
+            /* ----------------------------------------------
+               ESCALA
+               ---------------------------------------------- */
+            min: 0,
+            max: MAX_SCALE,
+            splitNumber: 5, // Ex: 0,12,24,36,48,60
 
-          /* Linha da escala */
-          axisLine: {
-            roundCap: true,
-            lineStyle: {
-              width: "12%",
-              color: [
-                [0.7, "#4caf50"],
-                [0.9, "#ff9800"],
-                [1, "#f44336"]
-              ]
-            }
-          },
+            /* ----------------------------------------------
+               LINHA DA ESCALA (ARCO)
+               ---------------------------------------------- */
+            axisLine: {
+              roundCap: true,
+              lineStyle: {
+                width: 18,
+                color: [
+                  [0.7, "#4caf50"],  // até 70% → verde
+                  [0.9, "#ff9800"],  // até 90% → amarelo
+                  [1, "#f44336"]     // acima → vermelho
+                ]
+              }
+            },
 
-          /* Barra de progresso */
-          progress: {
-            show: true,
-            roundCap: true,
-            width: "12%"
-          },
+            /* ----------------------------------------------
+               BARRA DE PROGRESSO
+               ---------------------------------------------- */
+            progress: {
+              show: true,
+              roundCap: true,
+              width: 18
+            },
 
-          /* Ponteiro */
-          pointer: {
-            length: "70%",
-            width: "6%"
-          },
+            /* ----------------------------------------------
+               PONTEIRO
+               ---------------------------------------------- */
+            pointer: {
+              length: "70%",
+              width: 14,
+              offsetCenter: [0, "5%"],
+              itemStyle: {
+                color: "#f44336"
+              }
+            },
 
-          /* Marcas pequenas */
-          axisTick: {
-            distance: -18,
-            length: "4%",
-            lineStyle: { color: "#999" }
-          },
+            /* ----------------------------------------------
+               MARCAS PEQUENAS
+               ---------------------------------------------- */
+            axisTick: {
+              distance: -30,
+              length: 6,
+              lineStyle: {
+                color: "#999",
+                width: 2
+              }
+            },
 
-          /* Marcas grandes (10 em 10) */
-          splitLine: {
-            distance: -22,
-            length: "8%",
-            lineStyle: { color: "#666" }
-          },
+            /* ----------------------------------------------
+               MARCAS GRANDES
+               ---------------------------------------------- */
+            splitLine: {
+              distance: -34,
+              length: 14,
+              lineStyle: {
+                color: "#999",
+                width: 3
+              }
+            },
 
-          /* Números da escala */
-          axisLabel: {
-            distance: -36,
-            fontSize: 14,
-            color: "#666",
+            /* ----------------------------------------------
+               NÚMEROS DA ESCALA
+               ---------------------------------------------- */
+            axisLabel: {
+              distance: -48,
+              color: "#777",
+              fontSize: 14
+            },
 
-            /* 🔑 garante passo fixo de 10 */
-            interval: 10
-          },
+            /* ----------------------------------------------
+               TEXTO CENTRAL (VALOR)
+               ---------------------------------------------- */
+            detail: {
+              valueAnimation: true,
+              fontSize: 36,
+              fontWeight: "bold",
+              color: "#444",
+              offsetCenter: [0, "38%"],
+              formatter: function (val) {
+                return val.toFixed(1) + " A";
+              }
+            },
 
-          /* Valor central */
-          detail: {
-            valueAnimation: true,
-            fontSize: "180%",
-            fontWeight: "bold",
-            color: "#333",
-            offsetCenter: [0, "35%"],
-            formatter: val => val.toFixed(1) + " A"
-          },
+            title: { show: false },
 
-          title: { show: false },
-
-          /* Valor atual */
-          data: [{ value: safeValue }]
-        }]
+            /* ----------------------------------------------
+               VALOR QUE MOVE O GAUGE
+               ---------------------------------------------- */
+            data: [{ value: safeValue }]
+          }
+        ]
       });
 
-      /* Ajuste automático ao redimensionar */
       chart.resize();
     }
 
     /* ======================================================
-       PROCESSA DADOS VINDOS DO TAGOIO
+       FUNÇÃO QUE PROCESSA OS DADOS DO TAGOIO
        ====================================================== */
     function processData(dataArray) {
 
+      /* --------------------------------------------------
+         Filtra apenas a variável desejada
+         -------------------------------------------------- */
       const filtered = dataArray
-        .filter(d => d.variable === VARIABLE_NAME)
+        .filter(item => item.variable === VARIABLE_NAME)
         .sort((a, b) => new Date(b.time) - new Date(a.time));
 
+      /* --------------------------------------------------
+         Se não houver dados, não faz nada
+         -------------------------------------------------- */
       if (!filtered.length) return;
 
-      renderGauge(Number(filtered[0].value));
+      /* --------------------------------------------------
+         Pega o valor mais recente
+         -------------------------------------------------- */
+      const latestValue = Number(filtered[0].value);
+
+      renderGauge(latestValue);
     }
 
     /* ======================================================
-       CARGA INICIAL (HISTÓRICO)
+       EXECUTA AO CARREGAR O WIDGET
+       Usa dados históricos já disponíveis
        ====================================================== */
     window.TagoIO.onStart(widget => {
       processData(widget.data);
     });
 
     /* ======================================================
-       ATUALIZAÇÃO EM TEMPO REAL
+       EXECUTA SEMPRE QUE CHEGAR DADO NOVO (REALTIME)
        ====================================================== */
     window.TagoIO.onRealtime(buckets => {
+
       let allData = [];
 
       buckets.forEach(bucket => {
@@ -184,16 +249,9 @@
     });
 
     /* ======================================================
-       FINALIZA INICIALIZAÇÃO
+       FINALIZA A INICIALIZAÇÃO DO WIDGET
        ====================================================== */
     window.TagoIO.ready();
-
-    /* ======================================================
-       REDIMENSIONAMENTO AUTOMÁTICO
-       ====================================================== */
-    window.addEventListener("resize", () => {
-      if (chart) chart.resize();
-    });
   </script>
 
 </body>
