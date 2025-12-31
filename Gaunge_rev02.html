@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+
+  <!-- ======================================================
+       SDK OFICIAL DO CUSTOM WIDGET TAGOIO
+       ====================================================== -->
+  <script src="https://admin.tago.io/dist/custom-widget.min.js"></script>
+
+  <!-- ======================================================
+       APACHE ECHARTS
+       ====================================================== -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+  <style>
+    /* ======================================================
+       ESTILO GLOBAL
+       ====================================================== */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    /* ======================================================
+       CONTAINER DO GAUGE
+       ====================================================== */
+    #chart {
+      width: 100%;
+      height: 100%;
+      min-height: 250px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ======================================================
+       DIV DO GAUGE
+       ====================================================== -->
+  <div id="chart"></div>
+
+  <script>
+    /* ======================================================
+       VARIÁVEL GLOBAL DO GRÁFICO
+       ====================================================== */
+    let chart = null;
+
+    /* ======================================================
+       CONFIGURAÇÕES PRINCIPAIS
+       ====================================================== */
+    const VARIABLE_NAME = "current_ipp1"; // variável do TagoIO
+    const MAX_SCALE = 60;                 // escala máxima (A)
+
+    /* ======================================================
+       FUNÇÃO DE DESENHO / ATUALIZAÇÃO DO GAUGE
+       ====================================================== */
+    function renderGauge(value) {
+
+      /* Inicializa apenas uma vez */
+      if (!chart) {
+        chart = echarts.init(document.getElementById("chart"));
+      }
+
+      /* Evita ultrapassar a escala */
+      const safeValue = Math.min(Number(value), MAX_SCALE);
+
+      chart.setOption({
+        series: [
+          {
+            type: "gauge",
+
+            /* =================================================
+               CONTROLE DE MARGEM EXTERNA (PONTO-CHAVE)
+               ================================================= */
+            center: ["50%", "250%"],  // ↓ sobe o gauge 58%
+            radius: "105%",          // ↑ reduz margens laterais
+
+            /* =================================================
+               FORMATO (MEIA LUA)
+               ================================================= */
+            startAngle: 180,
+            endAngle: 0,
+
+            /* =================================================
+               ESCALA (0–60 de 10 em 10)
+               ================================================= */
+            min: 0,
+            max: MAX_SCALE,
+            splitNumber: 6, // 0,10,20,30,40,50,60
+
+            /* =================================================
+               LINHA DA ESCALA (ARCO)
+               ================================================= */
+            axisLine: {
+              roundCap: true,
+              lineStyle: {
+                width: 18,
+                color: [
+                  [0.7, "#4caf50"],  // 🟢 normal
+                  [0.9, "#ff9800"],  // 🟡 alerta
+                  [1.0, "#f44336"]   // 🔴 crítico
+                ]
+              }
+            },
+
+            /* =================================================
+               BARRA DE PROGRESSO
+               ================================================= */
+            progress: {
+              show: true,
+              roundCap: true,
+              width: 18,
+              itemStyle: {
+                color: "#2196f3"
+              }
+            },
+
+            /* =================================================
+               PONTEIRO
+               ================================================= */
+            pointer: {
+              length: "70%",
+              width: 14,
+              offsetCenter: [0, "0%"], // ↓ remove margem extra
+              itemStyle: {
+                color: "#f44336"
+              }
+            },
+
+            /* =================================================
+               MARCAS PEQUENAS
+               ================================================= */
+            axisTick: {
+              distance: -24, // ↓ menos margem
+              length: 6,
+              lineStyle: {
+                color: "#999",
+                width: 2
+              }
+            },
+
+            /* =================================================
+               MARCAS GRANDES
+               ================================================= */
+            splitLine: {
+              distance: -28, // ↓ menos margem
+              length: 14,
+              lineStyle: {
+                color: "#999",
+                width: 3
+              }
+            },
+
+            /* =================================================
+               NÚMEROS DA ESCALA
+               ================================================= */
+            axisLabel: {
+              distance: -40, // ↓ aproxima do arco
+              fontSize: 14,
+              color: "#777"
+            },
+
+            /* =================================================
+               TEXTO CENTRAL
+               ================================================= */
+            detail: {
+              valueAnimation: true,
+              fontSize: 36,
+              fontWeight: "bold",
+              color: "#444",
+              offsetCenter: [0, "30%"], // ↓ sobe o valor
+              formatter: val => val.toFixed(1) + " A"
+            },
+
+            title: { show: false },
+
+            /* =================================================
+               VALOR ATUAL
+               ================================================= */
+            data: [{ value: safeValue }]
+          }
+        ]
+      });
+
+      chart.resize();
+    }
+
+    /* ======================================================
+       PROCESSAMENTO DOS DADOS DO TAGOIO
+       ====================================================== */
+    function processData(dataArray) {
+
+      const filtered = dataArray
+        .filter(d => d.variable === VARIABLE_NAME)
+        .sort((a, b) => new Date(b.time) - new Date(a.time));
+
+      if (!filtered.length) return;
+
+      renderGauge(filtered[0].value);
+    }
+
+    /* ======================================================
+       CARGA INICIAL (HISTÓRICO)
+       ====================================================== */
+    window.TagoIO.onStart(widget => {
+      processData(widget.data);
+    });
+
+    /* ======================================================
+       ATUALIZAÇÃO EM TEMPO REAL
+       ====================================================== */
+    window.TagoIO.onRealtime(buckets => {
+      let allData = [];
+
+      buckets.forEach(bucket => {
+        if (bucket.result) {
+          allData = allData.concat(bucket.result);
+        }
+      });
+
+      processData(allData);
+    });
+
+    /* ======================================================
+       RESIZE OBRIGATÓRIO NO TAGOIO
+       ====================================================== */
+    window.addEventListener("resize", () => {
+      if (chart) chart.resize();
+    });
+
+    /* ======================================================
+       FINALIZA INICIALIZAÇÃO
+       ====================================================== */
+    window.TagoIO.ready();
+  </script>
+
+</body>
+</html>
