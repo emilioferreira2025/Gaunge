@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+
+  <!-- ======================================================
+       SDK OFICIAL DO CUSTOM WIDGET TAGOIO
+       - Permite usar onStart / onRealtime
+       - Acessa widget.data (histórico)
+       ====================================================== -->
+  <script src="https://admin.tago.io/dist/custom-widget.min.js"></script>
+
+  <!-- ======================================================
+       APACHE ECHARTS
+       - Biblioteca usada para desenhar o Gauge
+       ====================================================== -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+  <style>
+    /* ======================================================
+       ESTILO GLOBAL
+       ====================================================== */
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    /* ======================================================
+       CONTAINER DO GAUGE
+       - Precisa ocupar 100% do widget
+       ====================================================== */
+    #chart {
+      width: 100%;
+      height: 100%;
+      min-height: 240px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ======================================================
+       DIV ONDE O GAUGE SERÁ RENDERIZADO
+       ====================================================== -->
+  <div id="chart"></div>
+
+  <script>
+    /* ======================================================
+       VARIÁVEL GLOBAL DO GRÁFICO
+       - Evita recriar o gráfico a cada atualização
+       ====================================================== */
+    let chart = null;
+
+    /* ======================================================
+       CONFIGURAÇÕES PRINCIPAIS
+       ====================================================== */
+
+    const VARIABLE_NAME = "current_ipp1"; // 🔴 nome da variável no TagoIO
+    const MAX_SCALE = 60;                 // 🔴 escala máxima do gauge (A)
+
+    /* ======================================================
+       FUNÇÃO QUE CRIA O OPTION DO GAUGE
+       - Recebe o valor atual
+       - Retorna a configuração completa
+       ====================================================== */
+    function getOption(value) {
+
+      return {
+        series: [
+          {
+            type: "gauge",
+
+            /* =================================================
+               CONTROLE DE MARGENS EXTERNAS
+               =================================================
+               center:
+               - X = 50% (centralizado)
+               - Y = 58% (sobe o gauge, reduz espaço inferior)
+
+               radius:
+               - >100% ocupa mais espaço e reduz margens
+               ================================================= */
+            center: ["50%", "58%"],
+            radius: "105%",
+
+            /* =================================================
+               FORMATO DO GAUGE
+               ================================================= */
+            startAngle: 180,
+            endAngle: 0,
+
+            /* =================================================
+               ESCALA
+               ================================================= */
+            min: 0,
+            max: MAX_SCALE,
+            splitNumber: 6, // 0,10,20,30,40,50,60
+
+            /* =================================================
+               ARCO DA ESCALA (CORES)
+               ================================================= */
+            axisLine: {
+              roundCap: true,
+              lineStyle: {
+                width: 18,
+                color: [
+                  [0.7, "#4caf50"],  // 🟢 normal
+                  [0.9, "#ff9800"],  // 🟡 alerta
+                  [1, "#f44336"]     // 🔴 crítico
+                ]
+              }
+            },
+
+            /* =================================================
+               BARRA DE PROGRESSO
+               ================================================= */
+            progress: {
+              show: true,
+              roundCap: true,
+              width: 18
+            },
+
+            /* =================================================
+               PONTEIRO
+               ================================================= */
+            pointer: {
+              length: "70%",
+              width: 14,
+
+              // remove margem vertical extra
+              offsetCenter: [0, "0%"],
+
+              itemStyle: {
+                color: "#f44336"
+              }
+            },
+
+            /* =================================================
+               MARCAS PEQUENAS (ticks)
+               ================================================= */
+            axisTick: {
+              distance: -24,   // aproxima do arco
+              length: 6,
+              lineStyle: {
+                color: "#999",
+                width: 2
+              }
+            },
+
+            /* =================================================
+               MARCAS GRANDES (splitLine)
+               ================================================= */
+            splitLine: {
+              distance: -28,   // aproxima do arco
+              length: 14,
+              lineStyle: {
+                color: "#999",
+                width: 3
+              }
+            },
+
+            /* =================================================
+               NÚMEROS DA ESCALA
+               ================================================= */
+            axisLabel: {
+              distance: -10,   // reduz margem
+              fontSize: 14,
+              color: "#777"
+            },
+
+            /* =================================================
+               TEXTO CENTRAL (VALOR)
+               ================================================= */
+            detail: {
+              valueAnimation: true,
+              fontSize: 34,
+              fontWeight: "bold",
+              color: "#444",
+
+              // sobe o texto central
+              offsetCenter: [0, "22%"],
+
+              formatter: v => v.toFixed(1) + " A"
+            },
+
+            title: { show: false },
+
+            /* =================================================
+               VALOR ATUAL DO GAUGE
+               ================================================= */
+            data: [{ value }]
+          }
+        ]
+      };
+    }
+
+    /* ======================================================
+       PROCESSA DADOS VINDOS DO TAGOIO
+       ====================================================== */
+    function proce
